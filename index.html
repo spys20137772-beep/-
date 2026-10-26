@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🔥 한예성 강화</title>
+<style>
+:root{--bg:#14151a;--card:#1f2129;--fg:#eee;--mut:#9aa0ad;--ac:#ffcc00}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 "맑은 고딕",system-ui,sans-serif;display:flex;justify-content:center}
+#app,#gate,#setup{width:100%;max-width:440px;padding:12px}
+#gate,#setup{margin-top:20vh;text-align:center}
+.card{background:var(--card);border-radius:12px;padding:12px;margin:8px 0}
+button{font:inherit;border:0;border-radius:8px;padding:9px;background:#3a3d4a;color:var(--fg);cursor:pointer}
+button:active{filter:brightness(1.3)}button.p{background:var(--ac);color:#000;font-weight:700;font-size:17px;width:100%}
+button.d{background:#a33}button:disabled{opacity:.4}
+input[type=password],input[type=number],input[type=text]{font:inherit;padding:9px;border-radius:8px;border:1px solid #444;background:#111;color:var(--fg);width:100%;margin:8px 0}
+input[type=number]{width:60px;margin:0;padding:3px}
+.g{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.c{text-align:center}.m{color:var(--mut);font-size:13px}
+#img{width:116px;height:116px;margin:4px auto;display:flex;align-items:center;justify-content:center;background:#000;border-radius:10px;border:3px solid #222;font-size:11px;color:var(--mut);transition:border-color .25s}
+#img img{width:100%;height:100%;object-fit:contain}
+.sh{animation:sk .35s}@keyframes sk{25%{transform:translateX(-9px)}50%{transform:translateX(9px)}75%{transform:translateX(-5px)}}
+label{margin-right:8px;white-space:nowrap}
+.r{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #2c2f3a;gap:8px}
+#pn{position:fixed;inset:0;margin:0;padding:12px;border-radius:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:50}
+.mb{background:var(--card);border-radius:12px;padding:14px;width:100%;max-width:420px;max-height:85vh;overflow:auto}
+#xs label{display:block;white-space:normal;margin:4px 0}
+</style>
+</head>
+<body>
+<div id="gate">
+  <h2 id="gh">🔒 한예성 강화</h2>
+  <p class="m" id="gp">친구 전용 입장 비밀번호를 입력하세요</p>
+  <input id="pw" type="password" placeholder="비밀번호" autocomplete="off">
+  <button class="p" onclick="unlock()">입장</button>
+  <p id="ge" style="color:#f66"></p>
+</div>
+
+<div id="setup" hidden>
+  <h2>👤 계정 만들기</h2>
+  <p class="m">아이디는 게임 곳곳에 이름으로 표시돼요.<br>비밀번호는 진행도를 초기화할 때 필요해요.</p>
+  <input id="sid" type="text" placeholder="아이디 (1~12자)" maxlength="12" autocomplete="off">
+  <input id="spw" type="password" placeholder="비밀번호 (4자 이상)" autocomplete="new-password">
+  <input id="spw2" type="password" placeholder="비밀번호 확인" autocomplete="new-password">
+  <button class="p" onclick="setupAcct()">시작하기</button>
+  <p id="se" style="color:#f66"></p>
+</div>
+
+<div id="app" hidden>
+  <div class="card c">
+    <b id="ttl">🔥 한예성 강화</b>
+    <div id="st" class="m" style="color:var(--ac)"></div>
+    <div id="img"></div>
+    <b id="nm" style="color:#7af"></b>
+    <div id="msg" style="min-height:24px;font-weight:700"></div>
+    <div id="inf" class="m"></div>
+  </div>
+
+  <div class="card">
+    <label><input type="checkbox" id="up"> 🛡️방지권</label>
+    <label><input type="checkbox" id="ub"> 📜축복서(×1.1)</label><br>
+    <label><input type="checkbox" id="ud"> 🏷️할인권</label>
+    <input type="number" id="dn" min="1" max="5" value="1"> 개 (개당 -5%, 최대 5개)<br>
+    <label><input type="checkbox" id="uc"> 🍀대성공 부적</label>
+    <input type="number" id="cn" min="1" max="5" value="1"> 개 (개당 +5%, 최대 5개)<div id="xs" style="margin-top:6px"></div>
+  </div>
+
+  <button class="p" onclick="up()">🔨 강화하기</button>
+  <div class="g">
+    <button id="sb" onclick="sell()"></button>
+    <button onclick="P('shop')">🛒 상점</button>
+    <button onclick="P('dex')">📖 도감</button>
+    <button onclick="P('stat')">📊 통계</button>
+    <button onclick="P('log')">📜 로그</button>
+    <button onclick="P('reb')">✨ 환생</button>
+    <button onclick="P('pot')">⚡ 잠재력</button>
+    <button class="d" onclick="reset()">🔄 초기화</button>
+    <button onclick="exp()">💾 백업</button>
+    <button onclick="P('rl')">🎲 룰렛</button>
+    <button onclick="P('rh')">🎵 리듬</button>
+    <button onclick="P('au')">🤖 자동강화</button>
+    <button id="ab" onclick="P('ach')">🏆 업적</button>
+    <button onclick="P('boss')">🗡️ 보스전</button>
+    <button onclick="P('q')">📋 퀘스트</button>
+    <button onclick="P('ti')">🏅 칭호</button>
+    <button onclick="P('dl')">🎁 일일 특가</button>
+    <button onclick="P('calc')">🧮 비용 계산기</button>
+    <button onclick="P('cr')">🔧 조합소</button>
+    <button onclick="P('sl')">🎰 슬롯</button>
+    <button onclick="P('pt')">📢 업데이트</button>
+  </div>
+  <div id="pn" class="card" hidden></div>
+</div>
+
+<script>
+// =====================================================================
+//  ⚙️ CONFIG — 여기만 고치면 이름 / 제목 / 확률 / 아이템 / 보스 / 퀘스트 등을 전부 바꿀 수 있어요
+// =====================================================================
+const CFG={
+  // ---- 제목 / 문구 ----
+  PAGE_TITLE:"🔥 한예성 강화", GAME_NAME:"한예성 장비 강화",
+  GATE_TITLE:"🔒 한예성 강화", GATE_TEXT:"친구 전용 입장 비밀번호를 입력하세요",
+  PASSWORD_HASH:"ee4b9b9316aba2590bcf7324920eb2145cf97756a9c8a9d1153752f07ed31dff", // 비번의 SHA-256 (소문자/앞뒤공백 무시)
+  SAVE_KEY:"hanyeseong_save_v1",
+  IMG:n=>`spys${n+1}.png`,            // n = 강화 단계. 0강 → spys1.png … 20강 → spys21.png
+  IMG2:n=>`spys${n+1}-2.png`,         // 2번째 세계 이미지. 0강 → spys1-2.png … 20강 → spys21-2.png
+  W2_MISSING:"1.1업뎃 닥치고 기다려",   // 2번째 세계 이미지가 없을 때 표시할 문구
+  W2_NEED:5,                          // 2번째 세계 개방에 필요한 환생 횟수
+
+  // ---- 게임 수치 ----
+  START_GOLD:300000, REBIRTH_COST:5000000,
+  REB_RATE:.2, REB_COST:.1, REB_SELL:.15,   // 환생 보너스 (성공률 +20%p / 비용 -10% / 판매가 +15%)
+  PITY_STEP:.03, PITY_MAX:1,                // 연속 실패 1회당 성공률 +3% (최대 +100%)
+  DESTROY_FROM:10,                          // 이 단계 이상에서 실패하면 파괴 위험
+  SCROLL_NEED:[[18,4],[15,3],[12,2]],       // [단계 이상, 방지권 필요 장수] (그 외 1장)
+  BOSS_TRIES:3, SHARD_PER_LV:3,             // 보스 하루 도전 횟수 / 분해 시 단계당 조각
+  RHYTHM:{limit:.35, rate:.1, cap:5e4, cd:15e3},
+  DISC_EACH:.05, DISC_MAX:5,                // 할인권: 개당 비용 -5%, 한 번에 최대 5개 (최대 -25%)
+  CHARM_EACH:.05, CHARM_MAX:5,              // 대성공 부적: 개당 +5%, 한 번에 최대 5개 (최대 +25%)
+
+  // ---- 장비 단계: [이름, 성공확률, 강화비용, 판매가] (줄 추가/삭제 = 단계 추가/삭제) ----
+  STAGES:[
+    ["일반 한예성",1,100,0],["쌈@뽕 한예성",.95,300,500],["낭만 한예성",.9,700,1500],
+    ["넣을지 말지 고민하다 결국 넣은 한예성",.85,1200,3000],["모기물린 한예성",.8,2000,6000],
+    ["머리자른 한예성",.75,3500,12000],["산예성",.7,5000,25000],["진지한예성",.65,8000,50000],
+    ["닥쳐예성",.6,12000,100000],["00해커010예성11",.55,20000,200000],["전설의 예성",.5,35000,400000],
+    ["닌자 예성",.43,50000,800000],["신 파괴자 예.성.",.35,80000,1500000],["지옥의 도살자 한예성",.27,120000,3000000],
+    ["우@$%&주!^&$ 파!@#$!@괴@^&*자@% 예&@*$성$#@",.19,200000,6000000],["초월한예성",.11,350000,12000000],
+    ["혼돈의 지배자 [예성]",.07,500000,25000000],["혼란의 파멸자 예성",.04,800000,50000000],
+    ["예성의 오른팔 예성-악마 코드1",.02,1200000,100000000],["예성의 왼팔 예성-두쫀쿠 코드2",.01,2000000,300000000],
+    [" ?한?예?성? ",.001,2000000,300000000]
+  ],
+
+  // ---- 아이템 (겹치는 효과 없이 역할별 1개씩. p,b,c,d 4개는 고정 기능 / 나머지는 fx 효과로 동작) ----
+  // fx: rate=성공률 배수, nodown=1이면 하락 방지 / min=사용 가능 최소 단계
+  ITEMS:[
+    {id:"p",icon:"🛡️",name:"🛡️ 파괴 방지권",price:30000,start:10,desc:"[파괴 방지] 10강 이상 실패 시 장비 파괴를 막아줍니다. 필요 장수: 10~11강 1장 · 12~14강 2장 · 15~17강 3장 · 18강 이상 4장."},
+    {id:"b",icon:"📜",name:"📜 성공률 축복서",price:15000,start:10,desc:"[성공률] 2강 이상 강화 시 성공률 ×1.1. 시도마다 1장 소모."},
+    {id:"c",icon:"🍀",name:"🍀 대성공 부적",price:20000,start:10,desc:"[대성공] 성공 시 +2강이 될 확률이 개당 +5%. 한 번에 최대 5개(최대 +25%) 사용, 시도마다 소모."},
+    {id:"d",icon:"🏷️",name:"🏷️ 강화 할인권",price:8000,start:10,desc:"[비용] 강화 비용이 개당 -5%. 한 번에 최대 5개(최대 -25%) 사용, 시도마다 사용한 만큼 소모. 비싼 단계(15강 이상)에서 이득이 큽니다."},
+    {id:"n",icon:"🧷",name:"🧷 안전핀",price:18000,fx:{nodown:1},desc:"[하락 방지] 10강 미만에서 실패해도 단계가 떨어지지 않습니다. 시도마다 1개 소모."},
+    {id:"w",icon:"🌈",name:"🌈 무지개 가루",price:150000,fx:{rate:1.2},min:10,desc:"[고강 성공률] 10강 이상에서만 성공률 ×1.2. 축복서와 함께 사용할 수 있고, 시도마다 1개 소모."}
+  ],
+
+  // ---- 🎁 랜덤 상자: [아이템id 또는 "sh"(조각), 개수, 가중치] ----
+  BOX:{price:50000,drops:[["d",3,25],["b",2,20],["c",2,15],["p",1,12],["n",2,10],["sh",20,8],["w",1,2]]},
+
+  // ---- 🔧 조합소: cost 키 = 아이템id / "sh"(조각) / "$"(골드) ; give = 얻는 아이템 ; lv = 장비 직접 제작(+0강일 때만) ----
+  RECIPES:[
+    {name:"🏷️ 할인권 ×1",cost:{sh:10},give:{d:1}},{name:"📜 축복서 ×1",cost:{sh:15},give:{b:1}},
+    {name:"🍀 부적 ×1",cost:{sh:20},give:{c:1}},{name:"🛡️ 방지권 ×1",cost:{sh:30},give:{p:1}},
+    {name:"🛡️ 방지권 ×2 (상위 조합)",cost:{b:3,c:2},give:{p:2}},
+    {name:"🧷 안전핀 ×2",cost:{d:2,sh:10},give:{n:2}},
+    {name:"🌈 무지개 가루 ×1",cost:{b:5,c:3,sh:150},give:{w:1}},
+    {name:"⚔️ 장비 +3강 제작",cost:{sh:60},lv:3},{name:"⚔️ 장비 +6강 제작",cost:{sh:250},lv:6},
+    {name:"⚔️ 장비 +9강 제작",cost:{sh:900},lv:9},{name:"⚔️ 장비 +12강 제작",cost:{sh:3000,p:5,"$":500000},lv:12}
+  ],
+
+  // ---- ⚔️ 보스: [이름, 권장단계, 체력, 보상, 첫클리어 추가보상] (보상 키: g=골드, 아이템id) ----
+  BOSSES:[
+    ["슬라임 킹",3,300,{g:5e4},{g:1e5}],["고블린 대장",7,800,{g:2e5},{g:3e5,d:5}],["드래곤",11,1800,{g:8e5},{g:1e6,p:5}],
+    ["혼돈의 군주",15,3500,{g:3e6},{g:4e6,b:10}],["예성의 오른팔",18,6000,{g:6e6},{g:8e6,p:8}],["한예성 (진)",20,1e4,{g:1e7},{g:15e6,c:10,w:1}]
+  ],
+
+  // ---- 📋 퀘스트: [키, 목표, 설명, 보상] (키: up강화 rl룰렛 boss보스도전 bw보스승리 sell판매 mg미니게임 cr조합) ----
+  QUESTS_DAILY:[["up",5,"강화 5회",{g:2e4}],["rl",1,"룰렛 1회",{g:1e4}],["boss",1,"보스전 1회 도전",{g:3e4}],["sell",1,"장비 판매 1회",{g:5e3}],["mg",3,"리듬/슬롯 3회",{d:2}],["cr",1,"조합 1회",{g:3e4}]],
+  QUESTS_WEEKLY:[["up",100,"강화 100회",{g:3e5,b:5}],["bw",5,"보스 승리 5회",{g:5e5,p:3}],["mg",15,"리듬/슬롯 15회",{g:2e5,c:3}],["cr",10,"조합 10회",{g:3e5,d:5}]],
+
+  // ---- 🏅 칭호: [id, 이름, 설명, 조건스탯, 목표] / 스탯: max t boom reb rbest rw cr bsn msk att ----
+  TITLES:[
+    ["newbie","🌱 초보 강화사","기본","",0],["destroyer","💥 파괴왕","장비 파괴 10회","boom",10],
+    ["unyielding","🔥 불굴의 의지","연속 실패 15회 기록","msk",15],["gambler","🎲 도박꾼","룰렛 16배","rbest",16],
+    ["hunter","⚔️ 보스 사냥꾼","모든 보스 격파","bsn",6],["reborn","✨ 환생자","1회 이상 환생","reb",1],
+    ["loyal","📅 개근상","7일 연속 출석","att",7],["absolute","👑 절대자","최고 단계 달성","max",20],["smith","🔧 장인","조합 10회","cr",10]
+  ],
+
+  // ---- 🏆 업적: [id, 이름, 조건스탯, 목표, 보상] ----
+  ACH:[
+    ["l5","+5강 달성","max",5,{g:3e4}],["l10","+10강 달성","max",10,{g:15e4}],["l15","+15강 달성","max",15,{g:8e5,p:5}],
+    ["l19","+19강 달성","max",19,{g:5e6,p:10}],["l20","+20강 달성","max",20,{g:1e7,p:10,w:1}],
+    ["t100","누적 강화 100회","t",100,{g:5e4,d:5}],["t1k","누적 강화 1,000회","t",1e3,{g:3e5,b:10}],
+    ["x10","장비 파괴 10회","boom",10,{g:1e5,p:5}],["r1","첫 환생","reb",1,{g:5e5}],["r3","환생 3회","reb",3,{g:3e6,c:10}],
+    ["rl16","룰렛 16배 달성","rbest",16,{g:2e5}],["rh5","리듬/슬롯 5회 성공","rw",5,{g:1e5,c:5}],
+    ["cr10","조합 10회","cr",10,{g:2e5,d:5}],["bs3","보스 3종 격파","bsn",3,{g:5e5,d:5}],["bs6","모든 보스 격파","bsn",6,{g:5e6,p:5}]
+  ]
+};
+const DF=CFG.DESTROY_FROM;
+const H=CFG.PASSWORD_HASH;
+const $=id=>document.getElementById(id),f=n=>n.toLocaleString("ko-KR");
+const sha=async s=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)))].map(x=>x.toString(16).padStart(2,"0")).join("");
+
+// ---- 계정 (아이디/비밀번호) ----
+let ID="";
+const AK=CFG.SAVE_KEY+"_acct";
+let ACC=null;try{ACC=JSON.parse(localStorage.getItem(AK))}catch(e){}
+if(!ACC||!ACC.id||!ACC.h)ACC=null;
+
+async function unlock(){
+  const v=$("pw").value.trim().toLowerCase();
+  if(!window.crypto||!crypto.subtle){$("ge").textContent="https 주소 또는 최신 브라우저로 접속해 주세요.";return}
+  if(await sha(v)===H){
+    $("gate").hidden=true;
+    if(ACC){ID=ACC.id;$("app").hidden=false;boot()}else $("setup").hidden=false;
+  }else $("ge").textContent="비밀번호가 틀렸어요 ❌";
+}
+async function setupAcct(){
+  const id=$("sid").value.replace(/[<>&"'`]/g,"").trim(),p1=$("spw").value,p2=$("spw2").value,e=$("se");
+  if(id.length<1||id.length>12)return e.textContent="아이디는 1~12자로 입력하세요";
+  if(p1.length<4)return e.textContent="비밀번호는 4자 이상이어야 해요";
+  if(p1!==p2)return e.textContent="비밀번호 확인이 달라요";
+  ACC={id,h:await sha(id+"|"+p1)};
+  try{localStorage.setItem(AK,JSON.stringify(ACC))}catch(x){}
+  ID=id;$("setup").hidden=true;$("app").hidden=false;boot();
+}
+$("pw").addEventListener("keydown",e=>{if(e.key==="Enter")unlock()});
+["sid","spw","spw2"].forEach(i=>$(i).addEventListener("keydown",e=>{if(e.key==="Enter")setupAcct()}));
+document.title=CFG.PAGE_TITLE;$("gh").textContent=CFG.GATE_TITLE;$("gp").textContent=CFG.GATE_TEXT;
+const gn=()=>ID?`${ID}의 장비 강화`:CFG.GAME_NAME;
+
+// ---- 데이터 ----
+const N=CFG.STAGES.map(x=>x[0]),R=CFG.STAGES.map(x=>x[1]),C=CFG.STAGES.map(x=>x[2]),V=CFG.STAGES.map(x=>x[3]);
+const SHOP=Object.fromEntries(CFG.ITEMS.map(i=>[i.id,[i.name,i.price]]));
+const DESC=Object.fromEntries(CFG.ITEMS.map(i=>[i.id,i.desc||""]));
+const KEY=CFG.SAVE_KEY,RB=CFG.REBIRTH_COST,MAX=CFG.STAGES.length-1;
+const AU={on:0,id:0,n:0,t:10,rs:0},RH={m:"idle",id:0,t:0};let LR="";
+
+const D=()=>({lv:0,sh:0,cr:0,gold:CFG.START_GOLD,max:0,pk:{r:0,c:0,s:0},it:Object.fromEntries(CFG.ITEMS.map(i=>[i.id,i.start||0])),pot:0,t:0,ok:0,no:0,boom:0,sk:0,log:[],ach:{},bs:[],bt:{d:"",n:0},q:{d:"",w:"",p:{},wp:{},c:[],wc:[]},ti:"newbie",dl:{d:"",n:0},gl:0,msk:0,rbest:0,rw:0,rt:0,rl:null,att:{d:"",s:0},use:{p:1,b:0,d:0,c:0},cn:1,dn:1,w:0});
+let S=load();
+function load(){try{const j=JSON.parse(localStorage.getItem(KEY));if(j&&typeof j.lv==="number"){const o=Object.assign(D(),j);o.it=Object.assign(D().it,j.it);o.use=Object.assign(D().use,j.use);return o}}catch(e){}return D()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+
+// ---- 계산 ----
+const nb=()=>S.pk.r+S.pk.c+S.pk.s;
+const need=l=>(CFG.SCROLL_NEED.find(x=>l>=x[0])||[0,1])[1];
+const pct=r=>(r*100).toFixed(1).replace(/\.0$/,"")+"%";
+const price=l=>Math.floor(V[l]*(1+CFG.REB_SELL*S.pk.s));
+function rate(){let r=R[S.lv]*(1+CFG.REB_RATE*S.pk.r);const b=!!S.use.b&&S.it.b>0&&S.lv>=2;if(b)r*=1.1;if(S.pot)r*=1.25;r*=1+Math.min(CFG.PITY_MAX,S.sk*CFG.PITY_STEP);if(S.gl>0)r*=1.1;for(const i of xi())r*=i.fx.rate||1;return[Math.min(1,r),b]}
+const dc=()=>S.use.d?Math.min(CFG.DISC_MAX,S.it.d,Math.max(1,S.dn|0)):0;
+function cost(){let c=C[S.lv]*Math.max(.5,1-CFG.REB_COST*S.pk.c);const d=dc();if(d)c*=1-CFG.DISC_EACH*d;return[Math.max(1,Math.floor(c)),d]}
+function msg(t,c){$("msg").textContent=t;$("msg").style.color=c}
+function log(t){S.log.unshift(new Date().toLocaleTimeString("ko-KR")+"  "+t);S.log.length=Math.min(S.log.length,100)}
+function flash(c){if(AU.on)return;$("img").style.borderColor=c;setTimeout(()=>$("img").style.borderColor="#222",280)}
+function shake(){if(AU.on)return;const a=$("app");a.classList.remove("sh");void a.offsetWidth;a.classList.add("sh")}
+
+// ---- 강화 ----
+function up(a){
+  if(BT)return msg("⚔️ 전투 중에는 강화할 수 없어요","#f66");
+  if(AU.on&&!a)return msg("🤖 자동 강화 중에는 수동 강화가 불가해요","#f66");
+  if(S.lv>=MAX)return LR="max",msg("✨ 이미 최고 단계입니다!","#c9f");
+  const[c,d]=cost();if(S.gold<c)return LR="nogold",msg("💸 골드가 부족합니다!","#f66");
+  const[r,b]=rate(),from=S.lv;
+  const xs=xi();xs.forEach(i=>S.it[i.id]--);S.gold-=c;if(d)S.it.d-=d;if(b)S.it.b--;S.pot=0;
+  let cs=0;if(S.use.c&&S.it.c>0){cs=Math.max(1,Math.min((S.cn|0)||1,CFG.CHARM_MAX,S.it.c));S.it.c-=cs}
+  S.t++;qa("up");if(S.gl>0)S.gl--;let res;
+  if(Math.random()<r){
+    const j=Math.random()<cs*CFG.CHARM_EACH&&S.lv<MAX-1?2:1;
+    S.lv=Math.min(MAX,S.lv+j);S.max=Math.max(S.max,S.lv);S.ok++;S.sk=0;res="성공";
+    msg(`✨ 강화 성공! +${S.lv}강`+(j>1?" 🍀어케함?":""),"#6d6");flash("#3c3");
+  }else{
+    S.sk++;
+    if(from>=DF){
+      const n=need(from);
+      if(S.use.p&&S.it.p>=n){S.it.p-=n;S.no++;res="방지권";msg(`🛡️ 방지권 ${n}장 소모, 장비 보호`,"#c9f");flash("#93f")}
+      else{S.lv=0;S.boom++;res="파괴";msg("💥 장비 파괴ㅋㅋㅋㅋㅋ 0강으로 초기화 잘가랔ㅋㅋ","#f66");flash("#f00");shake()}
+    }else{
+      S.no++;res="실패";if(from>0&&!xs.some(i=>i.fx.nodown))S.lv--;
+      msg(from>0?"📉 ㅋㅋㅋㅋㅋ실패 1단계 하락이죠? 븅신ㅋㅋㅋ":"실패 (0강은 안전)","#e93");flash("#e55");
+    }
+  }
+  LR=res;S.msk=Math.max(S.msk||0,S.sk);const ev=evt(c);if(ev){$("msg").textContent+="  "+ev;log(ev)}log(`+${from}→+${S.lv} ${res} (${pct(r)})`);draw();
+}
+
+function sell(){
+  if(BT)return msg("⚔️ 전투 중에는 판매할 수 없어요","#f66");
+  if(AU.on)return msg("🤖 자동 강화 중에는 판매할 수 없어요","#f66");
+  if(!V[S.lv])return msg("0강은 판매 못해 꺼져","#f66");
+  const p=price(S.lv);
+  if(S.lv>=DF&&!confirm(`+${S.lv}강을 ${f(p)}G에 판매한다?`))return;
+  S.gold+=p;qa("sell");log(`💰 +${S.lv}강 판매 → ${f(p)}G`);msg(`🎁 ${f(p)}G 획득!`,"#7af");S.lv=0;draw();
+}
+
+function buy(k,n){
+  const c=SHOP[k][1]*n;if(S.gold<c)return msg("💸 골드가 부족하다 거지야","#f66");
+  S.gold-=c;S.it[k]+=n;msg(`🎁 ${SHOP[k][0]} ${n}개 구매!`,"#7af");draw();P("shop");
+}
+function buyPot(){
+  if(S.pot)return msg("이미 활성화되어 있어요","#f66");
+  if(S.gold<20000)return msg("💸 골드가 부족합니다!","#f66");
+  S.gold-=20000;S.pot=1;msg("⚡ 다음 강화 확률 ×1.25!","#c6f");draw();P("pot");
+}
+function rebirth(k){
+  if(BT)return msg("⚔️ 전투 중에는 환생할 수 없어요","#f66");
+  if(AU.on)return msg("🤖 자동 강화 중에는 환생할 수 없어요","#f66");
+  if(S.gold<RB)return msg("💸 환생 비용이 부족합니다!","#f66");
+  if(k==="c"&&S.pk.c>=5)return;
+  S.gold-=RB;S.pk[k]++;S.lv=0;S.sk=0;
+  log(`✨ ${ID} ${nb()}환생`);msg(`✨ ${ID}님 환생 성공! (${nb()}환생)`,"#c6f");draw();P("reb");
+  if(nb()===CFG.W2_NEED)setTimeout(()=>alert(`🌌 환생 ${CFG.W2_NEED}회 달성!\n환생 창에서 2번째 세계로 이동할 수 있어요.`),200);
+}
+function world(w){
+  if(nb()<CFG.W2_NEED)return msg(`🌌 환생 ${CFG.W2_NEED}회가 필요하다`,"#f66");
+  if(BT)return msg("⚔️ 전투 중에는 이동할 수 없어요","#f66");
+  if(AU.on)return msg("🤖 자동 강화 중에는 이동할 수 없어요","#f66");
+  S.w=w?1:0;log(`🌌 ${S.w?"2":"1"}번째 세계로 이동`);msg(`🌌 ${S.w?"2":"1"}번째 세계로 이동했어요!`,"#c6f");draw();P("reb");
+}
+function reset(){P("rs")}
+async function doReset(){
+  const e=$("rse"),v=$("rpw").value;
+  if(!ACC||await sha(ACC.id+"|"+v)!==ACC.h){e.textContent="비밀번호 아니야 그것도 기억을 못하냐 ㅋㅋㅋ ";return}
+  if(!confirm(`${ID}아 너 모든 진행도를 초기화한다?`))return;
+  const a=S.att;BT=null;AU.on=0;clearTimeout(AU.id);S=D();S.att=a;X();boot();msg(`${ID}님, 새로 시작합니다!`,"#7af");
+}
+function exp(){
+  const t=JSON.stringify(S);
+  (navigator.clipboard?navigator.clipboard.writeText(t).then(()=>alert("세이브 데이터가 클립보드에 복사됐어요.\n다른 기기에서는 메모장 등에 붙여넣어 보관하세요."),()=>prompt("복사하세요",t)):Promise.resolve(prompt("복사하세요",t)));
+}
+
+// ---- 업적 / 룰렛 / 리듬 / 자동 / 출석 ----
+const NM=Object.fromEntries(CFG.ITEMS.map(i=>[i.id,i.name.replace(/^\S+\s/,"")]));
+const GET={max:()=>S.max,t:()=>S.t,boom:()=>S.boom,reb:()=>nb(),rbest:()=>S.rbest,rw:()=>S.rw,cr:()=>S.cr||0,bsn:()=>S.bs.length,msk:()=>S.msk||0,att:()=>S.att.s};
+const ACH=CFG.ACH.map(a=>[a[0],a[1],GET[a[2]],a[3],a[4]]);
+const rtx=r=>Object.keys(r).map(k=>k==="g"?f(r.g)+"G":NM[k]+" "+r[k]+"개").join(" + ");
+function giveR(r){for(const k in r){if(k==="g")S.gold+=r.g;else S.it[k]+=r[k]}}
+function claim(id){
+  const a=ACH.find(x=>x[0]===id);if(!a||S.ach[id]||a[2]()<a[3])return;
+  S.ach[id]=1;giveR(a[4]);log(`🏆 ${a[1]} → ${rtx(a[4])}`);msg(`🎁 업적 보상 ${rtx(a[4])}!`,"#7af");draw();P("ach");
+}
+function bp(x){$("bet").value=Math.floor(S.gold*x)}
+function rl(a){
+  if(a==="go"){const b=parseInt($("bet").value)||0;if(S.rl)return;if(b<=0||b>S.gold)return msg("💸 배팅 금액이 올바르지 않아요","#f66");S.gold-=b;qa("rl");S.rl={b,m:1};return flip(0)}
+  if(!S.rl)return;
+  if(a==="x2")return flip(1);
+  const w=S.rl.b*S.rl.m;S.gold+=w;log(`🎲 룰렛 출금 +${f(w)}G (${S.rl.m}배)`);msg(`🎁 ${f(w)}G 출금!`,"#7af");S.rl=null;draw();P("rl");
+}
+function flip(d){
+  if(Math.random()<.5){S.rl.m=d?S.rl.m*2:2;S.rbest=Math.max(S.rbest,S.rl.m);msg(`🎉 성공! ${S.rl.m}배 (당첨금 ${f(S.rl.b*S.rl.m)}G)`,"#6d6")}
+  else{log(`🎲 룰렛 실패 -${f(S.rl.b)}G`);msg("😢 실패... 배팅금 증발!","#f66");S.rl=null}
+  draw();P("rl");
+}
+function rhm(t,c){const e=$("rhs");if(e){e.textContent=t;e.style.color=c}}
+function rhStart(){
+  if(RH.m!=="idle")return;const w=S.rt-Date.now();
+  if(w>0)return rhm(`⏳ 쿨타임 ${Math.ceil(w/1e3)}초`,"#9aa0ad");
+  RH.m="wait";rhm("집중...","#e93");
+  RH.id=setTimeout(()=>{RH.m="go";RH.t=performance.now();rhm("🔥 지금!!","#3d3")},1000+Math.random()*1500);
+}
+function rhHit(){
+  if(RH.m==="idle")return;
+  if(RH.m==="wait"){clearTimeout(RH.id);RH.m="idle";return rhm("❌ 너무 일렀어요!","#f66")}
+  const e=(performance.now()-RH.t)/1e3;RH.m="idle";
+  if(e<=CFG.RHYTHM.limit){const r=Math.min(Math.floor(S.gold*CFG.RHYTHM.rate),CFG.RHYTHM.cap);S.gold+=r;S.rw++;qa("mg");S.rt=Date.now()+CFG.RHYTHM.cd;log(`🎵 리듬 성공 +${f(r)}G (${e.toFixed(3)}초)`);rhm(`🎉 ${e.toFixed(3)}초! +${f(r)}G`,"#3d3");draw()}
+  else rhm(`😢 늦었어요 (${e.toFixed(3)}초)`,"#f66");
+}
+function auStop(r){
+  AU.on=0;clearTimeout(AU.id);log(`🤖 자동 강화 종료: ${r} (${AU.n}회)`);msg("🤖 자동 강화 종료: "+r,"#7af");draw();
+  if($("pn").dataset.k==="au")P("au");
+}
+function auT(){
+  if(AU.on)return auStop("사용자 중단");
+  AU.t=Math.min(MAX,Math.max(1,$("aut").value|0));AU.rs=Math.max(0,+$("aur").value||0);
+  if(S.lv>=AU.t)return msg("이미 목표 단계 이상이에요","#f66");
+  AU.on=1;AU.n=0;log(`🤖 자동 강화 시작 (목표 +${AU.t})`);P("au");au();
+}
+function au(){
+  if(!AU.on)return;
+  if(S.lv>=AU.t)return auStop(`목표 +${AU.t}강 달성!`);
+  if(S.gold-cost()[0]<AU.rs)return auStop("골드가 최소 보유 금액 이하");
+  if(S.lv>=DF&&!(S.use.p&&S.it.p>=need(S.lv)))return auStop("방지권 부족 → 파괴 위험");
+  LR="";up(1);AU.n++;
+  if(LR==="파괴"||LR==="nogold"||LR==="max")return auStop(LR==="파괴"?"장비 파괴":"골드 부족/최고 단계");
+  const e=$("aus");if(e)e.textContent=`▶ 진행 중... ${AU.n}회`;
+  AU.id=setTimeout(au,60);
+}
+function att(){
+  const t=new Date().toLocaleDateString("sv-SE"),a=S.att;if(a.d===t)return;
+  const y=new Date(Date.now()-864e5).toLocaleDateString("sv-SE");
+  a.s=a.d===y?a.s+1:1;a.d=t;const day=(a.s-1)%7+1,r={g:1e4*day};
+  if(day===7){r.p=3;r.b=3;r.c=3;r.d=3}
+  giveR(r);log(`📅 출석 ${a.s}일째 → ${rtx(r)}`);
+  setTimeout(()=>{draw();alert(`📅 ${ID}님 연속 출석 ${a.s}일째 (${day}/7일차)\n보상: ${rtx(r)}`)},300);
+}
+
+// ---- 업뎃: 이벤트 / 퀘스트 / 칭호 / 보스전 / 특가 / 계산기 ----
+function evt(c){const r=Math.random();
+  if(r<.05){S.it.d+=2;return"🧙 행운의 상인! 할인권 +2"}
+  if(r<.08){const l=Math.min(Math.floor(S.gold*.05),2e5);S.gold-=l;return l?`🦹 도둑! -${f(l)}G`:""}
+  if(r<.10){S.gl=10;return"🌟 골든타임! 10회 성공률 +10%"}
+  if(r<.12){S.gold+=c*5;return`💎 보물 발견! +${f(c*5)}G`}
+  return""}
+const QD=CFG.QUESTS_DAILY;
+const QW=CFG.QUESTS_WEEKLY;
+function qr(){const d=new Date(),t=d.toLocaleDateString("sv-SE"),w=d.getFullYear()+"-"+Math.floor((d-new Date(d.getFullYear(),0,1))/6048e5),q=S.q;
+  if(q.d!==t){q.d=t;q.p={};q.c=[]}if(q.w!==w){q.w=w;q.wp={};q.wc=[]}}
+function qa(k,n=1){qr();S.q.p[k]=(S.q.p[k]||0)+n;S.q.wp[k]=(S.q.wp[k]||0)+n}
+function qclaim(b,k){qr();const q=S.q,e=(b?QW:QD).find(x=>x[0]===k),p=b?q.wp:q.p,c=b?q.wc:q.c;
+  if(!e||c.includes(k)||(p[k]||0)<e[1])return;c.push(k);giveR(e[3]);log(`📋 퀘스트 보상 ${rtx(e[3])}`);msg(`📋 보상 ${rtx(e[3])}!`,"#7af");draw();P("q")}
+const BS=CFG.BOSSES;
+const TI=CFG.TITLES.map(t=>[t[0],t[1],t[2],()=>!t[3]||GET[t[3]]()>=t[4]]);
+const tname=()=>{const t=TI.find(x=>x[0]===S.ti&&x[3]());return t?t[1]:""};
+const pHP=l=>200+l*l*5,pDM=l=>12+l*l*.6,bAT=b=>.7*pHP(b[1])/(b[2]/pDM(b[1]));
+let BT=null;
+function bTries(){const t=S.bt,d=new Date().toLocaleDateString("sv-SE");if(t.d!==d){t.d=d;t.n=0}return CFG.BOSS_TRIES-t.n}
+function bStart(i){if(BT)return;if(AU.on)return msg("🤖 자동 강화 중에는 불가해요","#f66");if(S.lv<1)return msg("장비가 +0강이에요!","#f66");if(bTries()<=0)return msg("오늘 도전 횟수를 모두 썼어요","#f66");
+  S.bt.n++;qa("boss");BT={i,lv:S.lv,ph:pHP(S.lv),pm:pHP(S.lv),bh:BS[i][2],cd:0,t:`⚔️ ${BS[i][0]} 등장!`};draw();P("boss")}
+function bAct(a){if(!BT)return;const b=BS[BT.i],rn=x=>x*(.85+Math.random()*.3);let t="";
+  if(a==="atk"){const d=Math.round(rn(pDM(BT.lv)));BT.bh-=d;t=`🗡️ ${d} 피해! `}
+  else if(a==="ult"){if(BT.cd>0)return;BT.cd=3;if(Math.random()<.6){const d=Math.round(rn(pDM(BT.lv))*3);BT.bh-=d;t=`💥 필살! ${d} 피해! `}else t="💨 필살이 빗나감! "}
+  else{BT.ph=Math.min(BT.pm,BT.ph+BT.pm*.05);t="🛡️ 방어! 체력 5% 회복 "}
+  if(BT.bh>0){let d=Math.round(rn(bAT(b)));if(a==="def")d=Math.round(d*.3);BT.ph-=d;t+=`→ ${b[0]}의 반격 ${d} 피해`}
+  if(BT.cd>0&&a!=="ult")BT.cd--;BT.t=t;
+  if(BT.bh<=0)return bEnd(1);if(BT.ph<=0)return bEnd(0);P("boss")}
+function bEnd(w){const b=BS[BT.i];let tx;
+  if(w){const r={...b[3]},fs=!S.bs.includes(BT.i);if(fs){S.bs.push(BT.i);for(const k in b[4])r[k]=(r[k]||0)+b[4][k]}giveR(r);qa("bw");tx=`🎉 ${ID}님이 ${b[0]} 격파!${fs?" (첫 클리어!)":""} 보상 ${rtx(r)}`;msg(tx,"#6d6");flash("#3c3")}
+  else{tx=`😢 ${ID}님이 ${b[0]}에게 패배...`;msg(tx,"#f66")}
+  log("⚔️ "+tx);BT=null;draw();P("boss");alert(tx)}
+function dealOf(){const d=new Date().toLocaleDateString("sv-SE");let h=0;for(const c of d)h=(h*31+c.charCodeAt(0))>>>0;
+  const k=Object.keys(SHOP)[h%Object.keys(SHOP).length],ds=[.3,.4,.5][h%3];if(S.dl.d!==d){S.dl.d=d;S.dl.n=5}return[k,ds,Math.floor(SHOP[k][1]*(1-ds))]}
+function dealBuy(){const[k,,p]=dealOf();if(S.dl.n<=0)return msg("오늘 재고 소진","#f66");if(S.gold<p)return msg("💸 골드가 부족합니다!","#f66");
+  S.gold-=p;S.dl.n--;S.it[k]++;msg(`🎁 특가 ${SHOP[k][0]} 구매!`,"#7af");draw();P("dl")}
+function calc(){const t=Math.min(MAX,Math.max(1,$("ct").value|0)),pr=$("cp").checked,o=$("co");if(S.lv>=t){o.textContent="이미 목표 단계 이상이에요";return}
+  const n=t,m=Array.from({length:n},()=>Array(n+2).fill(0));
+  for(let l=0;l<n;l++){const p=Math.min(1,R[l]*(1+CFG.REB_RATE*S.pk.r)),c=Math.max(1,Math.floor(C[l]*Math.max(.5,1-CFG.REB_COST*S.pk.c))),fs=l==0?0:l<DF?l-1:pr?l:0;
+    m[l][l]+=1;if(l+1<n)m[l][l+1]-=p;m[l][fs]-=1-p;m[l][n]=c;m[l][n+1]=1}
+  for(let i=0;i<n;i++){let v=i;for(let r=i;r<n;r++)if(Math.abs(m[r][i])>Math.abs(m[v][i]))v=r;[m[i],m[v]]=[m[v],m[i]];const d=m[i][i];m[i]=m[i].map(x=>x/d);
+    for(let r=0;r<n;r++)if(r!==i&&m[r][i]){const g=m[r][i];m[r]=m[r].map((x,j)=>x-g*m[i][j])}}
+  o.innerHTML=`+${S.lv} → +${t}강<br>평균 시도 ${m[S.lv][n+1].toFixed(1)}회<br>평균 비용 ${f(Math.round(m[S.lv][n]))}G`+(pr?"<br><span class='m'>(방지권 소모량 제외)</span>":"")}
+
+// ---- 업뎃2: 아이템 효과 / 조합소 / 상자 / 슬롯 ----
+const xi=()=>CFG.ITEMS.filter(i=>i.fx&&S.use[i.id]&&S.it[i.id]>0&&S.lv>=(i.min||0));
+const nmk=k=>k==="sh"?"조각":k==="$"?"골드":NM[k];
+function craft(n){const r=CFG.RECIPES[n];if(AU.on||BT)return msg("지금은 조합할 수 없어요","#f66");
+  const have=k=>k==="$"?S.gold:k==="sh"?S.sh:S.it[k];
+  for(const k in r.cost)if((have(k)||0)<r.cost[k])return msg("재료가 부족해요","#f66");
+  if(r.lv!=null&&S.lv>0)return msg("장비 제작은 +0강일 때만 가능해요 (판매/분해 후)","#f66");
+  for(const k in r.cost){if(k==="$")S.gold-=r.cost[k];else if(k==="sh")S.sh-=r.cost[k];else S.it[k]-=r.cost[k]}
+  if(r.lv!=null){S.lv=r.lv;S.max=Math.max(S.max,S.lv)}for(const k in r.give||{})S.it[k]+=r.give[k];
+  S.cr=(S.cr||0)+1;qa("cr");log(`🔧 조합: ${r.name}`);msg(`🔧 ${r.name} 완료!`,"#7af");flash("#3c3");draw();P("cr")}
+function dis(){if(AU.on||BT)return;if(S.lv<1)return msg("+0강은 분해할 수 없어요","#f66");const g=S.lv*CFG.SHARD_PER_LV;
+  if(S.lv>=DF&&!confirm(`+${S.lv}강을 분해해 조각 ${g}개를 얻을까요?`))return;
+  S.sh+=g;log(`🔧 +${S.lv}강 분해 → 조각 ${g}`);msg(`🔧 분해! 조각 +${g}`,"#7af");S.lv=0;draw();P("cr")}
+function box(){const B=CFG.BOX;if(S.gold<B.price)return msg("💸 골드가 부족합니다!","#f66");S.gold-=B.price;
+  let r=Math.random()*B.drops.reduce((a,x)=>a+x[2],0),x=B.drops[0];for(const e of B.drops){if((r-=e[2])<0){x=e;break}}
+  if(x[0]==="sh")S.sh+=x[1];else S.it[x[0]]+=x[1];log(`🎁 상자: ${nmk(x[0])} ×${x[1]}`);msg(`🎁 상자에서 ${nmk(x[0])} ×${x[1]}!`,"#7af");draw();P("shop")}
+function slot(){const b=Math.floor($("sb2").value)||0;if(b<=0||b>S.gold)return msg("💸 배팅 금액을 확인하세요","#f66");
+  S.gold-=b;const y=["🍒","🍋","🔔","⭐","💎","7️⃣"],r=[0,0,0].map(()=>y[Math.random()*6|0]),u=new Set(r).size,w=Math.floor(b*(u==1?15:u==2?1.2:0));
+  S.gold+=w;qa("mg");if(w>b)S.rw++;$("slr").textContent=r.join(" ")+(w?` → +${f(w)}G`:" → 꽝");draw()}
+
+// ---- 패널 (팝업) ----
+function X(){const p=$("pn");p.hidden=true;p.dataset.k="";clearTimeout(RH.id);RH.m="idle"}
+$("pn").addEventListener("click",e=>{if(e.target===e.currentTarget)X()});
+function P(k){
+  const p=$("pn");
+  clearTimeout(RH.id);RH.m="idle";
+  let h="";
+  if(k==="shop"){
+    h="<b>🛒 상점</b>"+Object.keys(SHOP).map(i=>`<div class="r"><span>${SHOP[i][0]}<br><span class="m">${DESC[i]}</span><br><span class="m">${f(SHOP[i][1])}G · 보유 ${S.it[i]}</span></span><span><button onclick="buy('${i}',1)">1개</button> <button onclick="buy('${i}',10)">10개</button></span></div>`).join("")+`<div class="r"><span>🎁 랜덤 상자 (${f(CFG.BOX.price)}G)<br><span class="m">아이템/조각 랜덤 획득</span></span><button onclick="box()">구매</button></div>`;
+  }else if(k==="pot"){
+    h=`<b>⚡ 잠재력 돌파</b><p class="m">20,000G · 다음 1회 강화 성공률 ×1.25</p><button onclick="buyPot()">${S.pot?"활성화됨":"구매"}</button>`;
+  }else if(k==="reb"){
+    h=`<b>✨ 환생 (${f(RB)}G)</b><p class="m">장비가 0강으로 초기화되고 영구 보너스를 하나 얻습니다.</p>
+    <div class="g" style="grid-template-columns:1fr"><button onclick="rebirth('r')">🎯 성공률 +${Math.round(CFG.REB_RATE*100)}%p (${S.pk.r}회)</button>
+    <button onclick="rebirth('c')" ${S.pk.c>=5?"disabled":""}>💸 강화비용 -${Math.round(CFG.REB_COST*100)}% (${S.pk.c}/5회)</button>
+    <button onclick="rebirth('s')">💰 판매가 +${Math.round(CFG.REB_SELL*100)}% (${S.pk.s}회)</button></div>
+    <p class="m" style="margin-bottom:4px">🌌 현재 ${S.w?"2":"1"}번째 세계</p>`+(nb()>=CFG.W2_NEED?`<button style="width:100%" onclick="world(${S.w?0:1})">${S.w?"🌍 1번째 세계로 돌아가기":"🌌 2번째 세계로 이동"}</button>`:`<p class="m">환생 ${CFG.W2_NEED}회를 달성하면 2번째 세계로 갈 수 있어요 (${nb()}/${CFG.W2_NEED})</p>`);
+  }else if(k==="rs"){
+    h=`<b>🔄 초기화</b><p class="m">${ID}님의 모든 진행도가 삭제돼요.<br>계속하려면 계정 비밀번호를 입력하세요.</p><input id="rpw" type="password" placeholder="비밀번호" autocomplete="off"><button class="d" style="width:100%" onclick="doReset()">초기화 실행</button><p id="rse" style="color:#f66;margin:6px 0 0"></p>`;
+  }else if(k==="dex"){
+    h=`<b>📖 ${ID}의 도감 (${S.max+1}/${N.length})</b>`+N.map((n,i)=>`<div class="r"><span>${i<=S.max?`[+${i}] ${n}`:`[+${i}] 🔒 미해금`}</span><span class="m">${i<=S.max?f(price(i))+"G":""}</span></div>`).join("");
+  }else if(k==="stat"){
+    h=`<b>📊 ${ID}의 통계</b><p>시도 ${f(S.t)}회 · 성공 ${f(S.ok)} · 실패 ${f(S.no)} · 파괴 ${f(S.boom)}<br>실제 성공률 ${S.t?(S.ok/S.t*100).toFixed(1):0}% · 연속 실패 ${S.sk}회<br>환생 ${nb()}회 (확률 ${S.pk.r} / 비용 ${S.pk.c} / 판매 ${S.pk.s})</p>`;
+  }else if(k==="rl"){
+    h="<b>🎲 묻고 떠블 (50:50)</b>"+(S.rl?`<p>배팅 ${f(S.rl.b)}G · 현재 ${S.rl.m}배<br>당첨금 <b>${f(S.rl.b*S.rl.m)}G</b></p><div class="g" style="grid-template-columns:1fr 1fr"><button onclick="rl('cash')">💰 출금</button><button class="d" onclick="rl('x2')">🔥 떠블!</button></div>`:`<input id="bet" type="number" value="10000" min="1" style="width:100%;margin:8px 0;padding:9px"><div class="g" style="grid-template-columns:repeat(4,1fr)"><button onclick="bp(.1)">10%</button><button onclick="bp(.25)">25%</button><button onclick="bp(.5)">50%</button><button onclick="bp(1)">올인</button></div><br><button class="p" onclick="rl('go')">🎲 배팅 시작</button>`);
+  }else if(k==="rh"){
+    h=`<b>🎵 리듬 타이밍</b><p class="m">[시작] 후 초록색이 되면 즉시 [지금!] · 성공 시 보유 골드 ${CFG.RHYTHM.rate*100}%(최대 ${f(CFG.RHYTHM.cap)}G) · 쿨타임 ${CFG.RHYTHM.cd/1000}초</p><div id="rhs" class="c" style="min-height:48px;font-weight:700;font-size:18px">준비</div><div class="g" style="grid-template-columns:1fr 1fr"><button onclick="rhStart()">🚀 시작</button><button class="d" onclick="rhHit()">⚡ 지금!</button></div>`;
+  }else if(k==="au"){
+    h=`<b>🤖 자동 강화</b><p class="m">위 체크박스 설정이 그대로 적용돼요. 목표 달성 · 골드 하한 · 파괴 · 방지권 부족 시 자동 중단.</p><div class="r"><span>목표 단계</span><input id="aut" type="number" min="1" max="20" value="${AU.t}"></div><div class="r"><span>최소 보유 골드</span><input id="aur" type="number" value="${AU.rs}" style="width:120px"></div><div id="aus" class="c m" style="min-height:26px">${AU.on?"▶ 진행 중...":""}</div><button class="${AU.on?"d":"p"}" onclick="auT()">${AU.on?"⏹ 중단":"▶ 시작"}</button>`;
+  }else if(k==="ach"){
+    h=`<b>🏆 ${ID}의 업적</b>`+ACH.map(a=>{const c=a[2](),ok=c>=a[3];return `<div class="r"><span>${a[1]}<br><span class="m">${f(Math.min(c,a[3]))}/${f(a[3])} · 보상 ${rtx(a[4])}</span></span>${S.ach[a[0]]?"✅":ok?`<button onclick="claim('${a[0]}')">수령</button>`:"🔒"}</div>`}).join("");
+  }else if(k==="boss"){
+    if(BT){const b=BS[BT.i];h=`<b>⚔️ ${b[0]}</b><p>🧑 ${ID} ${Math.max(0,Math.round(BT.ph))}/${Math.round(BT.pm)} · 👹 ${Math.max(0,Math.round(BT.bh))}/${b[2]}</p><p class="m">${BT.t}</p><div class="g"><button onclick="bAct('atk')">🗡️ 공격</button><button onclick="bAct('ult')" ${BT.cd>0?"disabled":""}>💥 필살${BT.cd>0?`(${BT.cd})`:""}</button><button onclick="bAct('def')">🛡️ 방어</button></div>`}
+    else h=`<b>⚔️ 보스전</b><p class="m">장비 단계가 체력·공격력이 돼요 (장비 소모 없음). 오늘 남은 도전 ${bTries()}/${CFG.BOSS_TRIES}<br>공격 · 필살(60%로 3배, 쿨 3턴) · 방어(피해 -70%, 체력 5% 회복)</p>`+BS.map((b,i)=>`<div class="r"><span>${S.bs.includes(i)?"✅":"⚔️"} ${b[0]} (권장 +${b[1]})<br><span class="m">보상 ${rtx(b[3])}${S.bs.includes(i)?"":" · 첫 클리어 "+rtx(b[4])}</span></span><button onclick="bStart(${i})">도전</button></div>`).join("");
+  }else if(k==="q"){qr();const q=S.q;
+    h="<b>📋 퀘스트</b>"+[["🌞 일일",QD,q.p,q.c,0],["📆 주간",QW,q.wp,q.wc,1]].map(x=>`<p><b>${x[0]}</b></p>`+x[1].map(e=>{const c=x[2][e[0]]||0,g=x[3].includes(e[0]);return `<div class="r"><span>${e[2]} (${Math.min(c,e[1])}/${e[1]})<br><span class="m">보상 ${rtx(e[3])}</span></span>${g?"✅":c>=e[1]?`<button onclick="qclaim(${x[4]},'${e[0]}')">수령</button>`:"🔒"}</div>`}).join("")).join("");
+  }else if(k==="ti"){
+    h="<b>🏅 칭호</b>"+TI.map(t=>`<div class="r"><span>${t[1]}<br><span class="m">${t[2]}</span></span>${!t[3]()?"🔒":S.ti===t[0]?"✅ 장착 중":`<button onclick="S.ti='${t[0]}';draw();P('ti')">장착</button>`}</div>`).join("");
+  }else if(k==="dl"){const[dk,dd,dp]=dealOf();
+    h=`<b>🎁 오늘의 특가</b><p>${SHOP[dk][0]} · ${Math.round(dd*100)}% 할인 · ${f(dp)}G<br><span class="m">${DESC[dk]}</span><br><span class="m">남은 재고 ${S.dl.n}개 (매일 초기화)</span></p><button onclick="dealBuy()">특가 구매</button>`;
+  }else if(k==="calc"){
+    h=`<b>🧮 기대비용 계산기</b><p class="m">환생 보너스 반영 · 아이템/천장/이벤트 제외</p><div class="r"><span>목표 단계</span><input id="ct" type="number" min="1" max="${MAX}" value="${Math.min(MAX,Math.max(S.lv+1,10))}"></div><label><input type="checkbox" id="cp" checked> 방지권 사용 가정</label><br><br><button class="p" onclick="calc()">계산</button><p id="co"></p>`;
+  }else if(k==="pt"){
+    h=`<b>📢 업데이트</b><p class="m">🧹 효과가 겹치는 아이템 삭제 (네잎클로버·정령의 가호·절약 주머니·황금 망치·장인의 망치·수호 부적) → 역할별 1개씩 6종으로 정리<br>🏷️ 할인권 최대 5개 중복 사용 (개당 -5%, 최대 -25%) · 🍀 대성공 부적도 최대 5개 (최대 +25%)<br>📖 모든 아이템 설명 추가 (상점·체크박스) · 아이템 가격/상자/조합/보상 밸런스 조정<br>🪟 모든 메뉴가 팝업으로 열려요 (바깥 클릭 또는 닫기 버튼)<br><br>🌌 2번째 세계 (환생 ${CFG.W2_NEED}회 달성 시 개방)<br>👤 아이디/비밀번호 계정 · 초기화 시 비밀번호 확인<br>🔧 조합소 · 🎁 랜덤 상자 · 🎰 슬롯<br>⚙️ 모든 이름/확률/보스/퀘스트/아이템을 코드 맨 위 CFG에서 수정 가능</p>`;
+  }else if(k==="cr"){
+    h=`<b>🔧 조합소</b><p class="m">💎 보유 조각 ${f(S.sh||0)}개 · 현재 장비 +${S.lv}강</p><button onclick="dis()">🔧 현재 장비 분해 (조각 +${S.lv*CFG.SHARD_PER_LV})</button>`+CFG.RECIPES.map((r,n)=>`<div class="r"><span>${r.name}<br><span class="m">재료: ${Object.keys(r.cost).map(k=>nmk(k)+" "+f(r.cost[k])).join(" + ")}</span></span><button onclick="craft(${n})">제작</button></div>`).join("");
+  }else if(k==="sl"){
+    h=`<b>🎰 슬롯</b><p class="m">3개 일치 ×15 · 2개 일치 ×1.2</p><input id="sb2" type="number" value="10000" style="width:100%;margin:6px 0;padding:9px"><button class="p" onclick="slot()">🎰 돌리기</button><p id="slr" class="c" style="font-size:20px"></p>`;
+  }else if(k==="log"){
+    h=`<b>📜 ${ID}의 기록</b>`+(S.log.slice(0,40).map(x=>`<div class="r m">${x}</div>`).join("")||"<p class='m'>기록이 없습니다.</p>");
+  }
+  const o=p.querySelector(".mb"),sc=o&&p.dataset.k===k?o.scrollTop:0;
+  p.innerHTML=`<div class="mb"><div style="text-align:right;margin-bottom:4px"><button onclick="X()">✖ 닫기</button></div>${h}</div>`;
+  p.dataset.k=k;p.hidden=false;p.querySelector(".mb").scrollTop=sc;
+}
+
+// ---- 화면 ----
+function draw(){
+  const i=S.lv;
+  $("ttl").textContent=nb()?`🔥 [${nb()}환생] ${gn()}`:`🔥 ${gn()}`;
+  {const tn=tname();if(tn)$("ttl").textContent=`[${tn}] `+$("ttl").textContent}
+  if(S.w)$("ttl").textContent+=" 🌌2세계";
+  $("st").textContent=`💰 ${f(S.gold)}G | 💎${S.sh||0} | `+CFG.ITEMS.map(i=>i.icon+(S.it[i.id]||0)).join(" ");
+  $("nm").textContent=`+${i} ${N[i]}`;
+  {const src=S.w?CFG.IMG2(i):CFG.IMG(i),alt=S.w?CFG.W2_MISSING:src;
+   $("img").innerHTML=`<img src="${src}" alt="" onerror="this.replaceWith('${alt}')">`}
+  $("sb").textContent=`💰 판매 (${f(price(i))}G)`;
+  if(i>=MAX)$("inf").textContent="✨ 최고 강화 단계 달성!";
+  else{
+    const[r]=rate(),[c]=cost();
+    const ex=[];if(S.sk)ex.push(`🔁 연속실패 ${S.sk}회 (+${Math.round(Math.min(CFG.PITY_MAX,S.sk*CFG.PITY_STEP)*100)}%)`);if(S.pot)ex.push("⚡잠재력ON");if(S.gl>0)ex.push(`🌟골든타임 ${S.gl}회`);
+    $("inf").innerHTML=`성공률 ${pct(r)} | 비용 ${f(c)}G<br>`+(i>=DF?`🛡️ 실패 시 방지권 ${need(i)}장 필요`:"실패 시 1단계 하락 (파괴 없음)")+(ex.length?"<br>"+ex.join(" · "):"");
+  }
+  const n=ACH.filter(a=>!S.ach[a[0]]&&a[2]()>=a[3]).length;$("ab").textContent="🏆 업적"+(n?" ❗"+n:"");
+  save();
+  const pn=$("pn");if(!pn.hidden&&pn.dataset.k&&["stat","log","dex","ach"].includes(pn.dataset.k))P(pn.dataset.k);
+}
+
+function boot(){
+  const m={up:"p",ub:"b",ud:"d",uc:"c"};
+  for(const id in m){const e=$(id);e.checked=!!S.use[m[id]];e.onchange=()=>{S.use[m[id]]=e.checked?1:0;draw()}}
+  $("cn").value=S.cn;$("cn").onchange=()=>{S.cn=Math.min(CFG.CHARM_MAX,Math.max(1,$("cn").value|0));$("cn").value=S.cn;save()};
+  $("dn").value=S.dn;$("dn").onchange=()=>{S.dn=Math.min(CFG.DISC_MAX,Math.max(1,$("dn").value|0));$("dn").value=S.dn;draw()};
+  $("xs").innerHTML=CFG.ITEMS.filter(i=>i.fx).map(i=>`<label><input type="checkbox" data-i="${i.id}" ${S.use[i.id]?"checked":""}> ${i.name}<br><span class="m">${i.desc}</span></label>`).join("");$("xs").onchange=e=>{S.use[e.target.dataset.i]=e.target.checked?1:0;draw()};
+  document.title=`🔥 ${ID}의 강화`;
+  att();msg(`${ID}님, 강화 준비 완료!`,"#9aa0ad");draw();
+}
+</script>
+</body>
+</html>
