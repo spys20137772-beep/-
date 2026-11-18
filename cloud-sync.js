@@ -17,9 +17,13 @@
 
   var configured = API.indexOf('REPLACE_ME') < 0;
   var blocked = false, timer = null, pushing = false, again = false, lastPush = 0;
-  var dirty = {};
+  var fresh = false;          // 이번 페이지에서 클라우드 최신 상태를 확인했는지
+  var lastErr = '', lastOk = 0;
+  var dirty = {}, meta = {};  // meta: 키별로 마지막으로 맞춘 클라우드 버전(시간)
   try { (JSON.parse(g(P + 'dirty') || '[]')).forEach(function (k) { dirty[k] = 1; }); } catch (e) {}
+  try { meta = JSON.parse(g(P + 'meta') || '{}') || {}; } catch (e) { meta = {}; }
   function saveDirty() { s(P + 'dirty', JSON.stringify(Object.keys(dirty))); }
+  function saveMeta() { s(P + 'meta', JSON.stringify(meta)); }
   function acct() { return { id: g(P + 'id'), auth: g(P + 'auth') }; }
   function on() { var a = acct(); return configured && !!(a.id && a.auth); }
   function mark(k) { if (k.indexOf(P) === 0) return; dirty[k] = 1; saveDirty(); sched(); }
@@ -66,38 +70,59 @@
   function sched() {
     if (!on() || timer) return;
     var wait = Math.max(3000, 20000 - (Date.now() - lastPush));
-    timer = setTimeout(function () { timer = null; push(); }, wait);
+    timer = setTimeout(function () { timer = null; syncNow(); }, wait);
   }
 
+  // 바뀐 저장 올리기 (항상 클라우드 최신 확인 뒤에만)
   function push(keep) {
-    if (!on()) return Promise.resolve();
+    if (!on() || !fresh) return Promise.resolve();
     if (pushing) { again = true; return Promise.resolve(); }
     var ks = Object.keys(dirty);
     if (!ks.length) return Promise.resolve();
-    var sent = {};
-    var items = ks.map(function (k) { var v = g(k); sent[k] = v; return v === null ? { k: k, del: 1 } : { k: k, v: v }; });
+    var sent = {}, chunks = [[]], size = 0;
+    ks.forEach(function (k) {
+      var v = g(k); sent[k] = v;
+      var it = v === null ? { k: k, del: 1 } : { k: k, v: v };
+      var n = (v ? v.length : 0) + k.length + 20;
+      if (size + n > 300000 && chunks[chunks.length - 1].length) { chunks.push([]); size = 0; }
+      chunks[chunks.length - 1].push(it); size += n;
+    });
     pushing = true; lastPush = Date.now();
-    return api('push', { items: items }, keep).then(function () {
-      ks.forEach(function (k) { if (g(k) === sent[k]) delete dirty[k]; });
-      saveDirty(); setStat('ok');
-    }, function () { setStat('err'); }).then(function () {
+    var p = Promise.resolve();
+    chunks.forEach(function (ch) {
+      p = p.then(function () {
+        return api('push', { items: ch }, keep).then(function (res) {
+          ch.forEach(function (it) {
+            meta[it.k] = res.ts;
+            if (g(it.k) === sent[it.k]) delete dirty[it.k];
+          });
+          saveMeta(); saveDirty();
+        });
+      });
+    });
+    return p.then(function () { lastErr = ''; lastOk = Date.now(); setStat('ok'); },
+      function (e) { lastErr = e.message; setStat('err'); }).then(function () {
       pushing = false;
-      if (again) { again = false; push(); } else if (Object.keys(dirty).length) sched();
+      if (again) { again = false; push(); } else if (Object.keys(dirty).length && !lastErr) sched();
     });
   }
 
-  // 클라우드에서 바뀐 것 받아오기. 바뀐 게 있으면 true
+  // 클라우드에서 바뀐 것 받기. 다른 기기가 바꾼 건 클라우드 우선. 실제로 바뀐 게 있으면 true
   function pull(since) {
     if (since == null) since = +(g(P + 'since') || 0);
     return api('pull', { since: since }).then(function (res) {
       var changed = false;
       (res.items || []).forEach(function (it) {
-        if (dirty[it.k] || it.k.indexOf(P) === 0) return;
+        if (it.k.indexOf(P) === 0) return;
+        if (it.ts <= (meta[it.k] || 0)) return;     // 이미 맞춘 버전
+        meta[it.k] = it.ts; delete dirty[it.k];      // 다른 기기에서 바뀜 → 이 기기 옛날 값 버림
         var cur = g(it.k);
         if (it.del) { if (cur !== null) { blocked = true; r(it.k); changed = true; } }
         else if (cur !== it.v) { blocked = true; s(it.k, it.v); changed = true; }
       });
+      saveMeta(); saveDirty();
       s(P + 'since', String(res.max || since));
+      fresh = true; lastErr = ''; lastOk = Date.now();
       return changed;
     });
   }
@@ -105,18 +130,29 @@
   function reload(msg) {
     blocked = true;
     toast(msg || '☁ 다른 기기 저장 불러오는 중…');
-    setTimeout(function () { location.reload(); }, 600);
+    setTimeout(function () { location.reload(); }, 700);
   }
 
-  function syncNow(initial) {
+  var syncing = null;
+  function syncNow() {
     if (!on()) return Promise.resolve();
-    setStat('busy');
-    return push().then(function () { return pull(); }).then(function (changed) {
-      if (changed) reload(); else setStat('ok');
-    }).catch(function (e) {
-      blocked = false; setStat('err');
-      if (/틀렸/.test(e.message)) { toast('☁ ' + e.message + ' — 다시 로그인해줘'); }
-    });
+    if (syncing) return syncing;
+    fresh = false; setStat('busy');
+    syncing = pull().then(function (changed) {
+      if (changed) { reload(); return; }
+      return push();
+    }).then(function () { if (!blocked) setStat(lastErr ? 'err' : 'ok'); }).catch(function (e) {
+      blocked = false; lastErr = e.message; setStat('err');
+      if (/틀렸/.test(e.message)) toast('☁ ' + e.message + ' — 다시 로그인해줘');
+    }).then(function () { syncing = null; });
+    return syncing;
+  }
+
+  // 클라우드 저장으로 강제로 다시 받기
+  function forceDown() {
+    if (!on()) return Promise.resolve();
+    meta = {}; dirty = {}; saveMeta(); saveDirty(); s(P + 'since', '0');
+    return syncNow();
   }
 
   function sha(t) {
@@ -142,38 +178,39 @@
       return api('login', { id: id, auth: auth });
     }).then(function (res) {
       s(P + 'id', id); s(P + 'auth', auth); s(P + 'since', '0');
+      meta = {}; dirty = {}; saveMeta(); saveDirty();
       var local = keys();
       if (res.created || !res.count) {
-        // 새 계정이거나 클라우드 비어 있음 → 이 기기 데이터 올리기
+        // 새 계정 / 클라우드 비어 있음 → 이 기기 저장 올리기
         local.forEach(function (k) { dirty[k] = 1; }); saveDirty();
-        return push().then(function () { return pull(0); }).then(function () { return 'up'; });
+        fresh = true;
+        return push().then(function () { if (lastErr) throw new Error(lastErr); return 'up'; });
       }
       if (!local.length) return pull(0).then(function (c) { return c ? 'down' : 'same'; });
-      return ask('이 아이디에 클라우드 저장이 이미 있어.\n이 기기에도 저장 데이터가 있어. 어떤 걸 쓸까?',
-        ['☁ 클라우드 저장 받기', '📱 이 기기 저장 올리기']).then(function (c) {
-        if (c === 0) {
-          dirty = {}; saveDirty();
-          // 클라우드에 없는 이 기기 전용 저장은 지우지 않고 올려두기
-          return api('pull', { since: 0 }).then(function (res2) {
-            var have = {}; (res2.items || []).forEach(function (it) { have[it.k] = 1; });
-            keys().forEach(function (k) { if (!have[k]) dirty[k] = 1; });
-            saveDirty();
-            return pull(0);
-          }).then(function (ch) {
-            return push().then(function () { return ch ? 'down' : 'same'; });
-          });
-        }
-        // 이 기기 저장으로 덮어쓰기 (클라우드에만 있는 건 삭제)
-        return api('pull', { since: 0 }).then(function (res2) {
-          (res2.items || []).forEach(function (it) { if (!it.del) dirty[it.k] = 1; });
-          local.forEach(function (k) { dirty[k] = 1; }); saveDirty();
-          return push();
-        }).then(function () { return pull(0); }).then(function () { return 'up'; });
+      return ask('이 아이디에 클라우드 저장이 있어.\n이 브라우저에도 저장이 있어. 어떤 걸 쓸까?\n\n(다른 기기에서 하던 걸 이어하려면 위에 거)',
+        ['☁ 클라우드 저장 받기', '📱 이 브라우저 저장으로 덮어쓰기']).then(function (c) {
+        return api('pull', { since: 0 }).then(function (all) {
+          var items = all.items || [], have = {};
+          items.forEach(function (it) { if (!it.del) have[it.k] = 1; });
+          if (c === 0) {
+            // 클라우드 받기 + 이 브라우저에만 있는 저장은 올려두기
+            return pull(0).then(function (ch) {
+              keys().forEach(function (k) { if (!have[k]) dirty[k] = 1; }); saveDirty();
+              return push().then(function () { return ch ? 'down' : 'same'; });
+            });
+          }
+          // 이 브라우저 저장으로 덮어쓰기 (클라우드에만 있는 건 삭제)
+          items.forEach(function (it) { meta[it.k] = it.ts; dirty[it.k] = 1; });
+          local.forEach(function (k) { dirty[k] = 1; });
+          saveMeta(); saveDirty(); s(P + 'since', String(all.max || 0));
+          fresh = true;
+          return push().then(function () { if (lastErr) throw new Error(lastErr); return 'up'; });
+        });
       });
     });
   }
 
-  function logout() { r(P + 'id'); r(P + 'auth'); r(P + 'since'); dirty = {}; saveDirty(); setStat(); }
+  function logout() { r(P + 'id'); r(P + 'auth'); r(P + 'since'); r(P + 'meta'); meta = {}; dirty = {}; saveDirty(); fresh = false; setStat(); }
 
   // ───── 화면(작은 ☁ 버튼 + 패널) ─────
   var ui = {}, statNow = '';
@@ -228,8 +265,14 @@
   }
   function open() {
     if (on()) {
-      var p = panel('<h3>☁ 클라우드 저장</h3><p></p><button class="p" data-a="s">지금 동기화</button><button data-a="o">로그아웃</button><button data-a="c">닫기</button>');
-      p.querySelector('p').textContent = '로그인: ' + acct().id + '\n게임 저장이 자동으로 클라우드에 올라가고, 다른 브라우저에서도 같은 아이디로 로그인하면 이어서 할 수 있어.';
+      var p = panel('<h3>☁ 클라우드 저장</h3><p></p><button class="p" data-a="s">지금 동기화</button><button data-a="f">☁ 클라우드 저장 다시 받기</button><button data-a="o">로그아웃</button><button data-a="c">닫기</button>');
+      var nd = Object.keys(dirty).length;
+      p.querySelector('p').textContent = '로그인: ' + acct().id +
+        '\n이 브라우저 저장: ' + keys().length + '개' + (nd ? ' (안 올라간 것 ' + nd + '개)' : '') +
+        '\n마지막 동기화: ' + (lastOk ? new Date(lastOk).toLocaleTimeString() : '아직 없음') +
+        (lastErr ? '\n⚠ 오류: ' + lastErr : '') +
+        '\n\n저장은 자동으로 올라가고, 다른 브라우저에서 같은 아이디로 로그인하면 이어서 할 수 있어.';
+      p.querySelector('[data-a=f]').onclick = function () { close(); toast('☁ 클라우드에서 받는 중…'); forceDown().then(function () { if (!blocked) toast(lastErr ? '☁ 실패: ' + lastErr : '☁ 이미 클라우드랑 같아'); }); };
       p.querySelector('[data-a=s]').onclick = function () { close(); toast('☁ 동기화 중…'); syncNow().then(function () { if (!blocked) toast(statNow === 'err' ? '☁ 동기화 실패 (인터넷 확인)' : '☁ 동기화 완료'); }); };
       p.querySelector('[data-a=o]').onclick = function () { logout(); close(); toast('☁ 로그아웃했어 (이 기기 저장은 그대로)'); };
       p.querySelector('[data-a=c]').onclick = close;
@@ -286,19 +329,25 @@
     document.body.appendChild(b); ui.b = b; setStat(statNow);
   }
 
+  // 예전 버전에서 로그인했던 브라우저 → 저장 덮어쓰기 방지 위해 다시 로그인해서 고르게
+  var needRelogin = !!g(P + 'id') && g(P + 'meta') === null;
+  if (needRelogin) { r(P + 'id'); r(P + 'auth'); r(P + 'since'); dirty = {}; saveDirty(); }
+
   function start() {
     css(); button();
+    if (needRelogin) toast('☁ 클라우드 저장 업데이트됨 — ☁ 버튼 눌러서 다시 로그인해줘');
     if (on()) syncNow(true);
     // 게임 쪽 저장 처리 뒤에 실행되도록 나중에 등록
     document.addEventListener('visibilitychange', function () {
       if (!on()) return;
-      if (document.visibilityState === 'hidden') { clearTimeout(timer); timer = null; push(true); }
+      if (document.visibilityState === 'hidden') { clearTimeout(timer); timer = null; if (!blocked) push(true); }
       else syncNow();
     });
     addEventListener('pagehide', function () { if (on() && !blocked) push(true); });
+    setInterval(function () { if (on() && !blocked && document.visibilityState === 'visible') syncNow(); }, 60000);
   }
   if (document.readyState === 'complete') start();
   else addEventListener('load', start);
 
-  window.__CS = { open: open, login: login, logout: logout, sync: syncNow, status: function () { return { on: on(), id: acct().id, dirty: Object.keys(dirty), stat: statNow }; } };
+  window.__CS = { open: open, login: login, logout: logout, sync: syncNow, status: function () { return { on: on(), id: acct().id, dirty: Object.keys(dirty), stat: statNow, err: lastErr }; }, forceDown: forceDown };
 })();
