@@ -15,6 +15,77 @@
   function r(k) { oRem.call(LS, k); }
   function keys() { var a = [], i, k; for (i = 0; i < LS.length; i++) { k = oKey.call(LS, i); if (k != null && k.indexOf(P) !== 0) a.push(k); } return a; }
 
+  // ───── Firebase 로그인(익명 계정 uid) 같이 옮기기 ─────
+  // Firebase는 로그인 정보를 IndexedDB(firebaseLocalStorageDb)에 둠 → localStorage '__fbu:' 키로 복사해서 같이 연동
+  var FBP = '__fbu:', FBDB = 'firebaseLocalStorageDb', FBST = 'firebaseLocalStorage';
+  function fbOpen() {
+    return new Promise(function (res) {
+      if (!window.indexedDB) return res(null);
+      var rq;
+      try { rq = indexedDB.open(FBDB); } catch (e) { return res(null); }
+      rq.onupgradeneeded = function () { try { rq.result.createObjectStore(FBST, { keyPath: 'fbase_key' }); } catch (e) {} };
+      rq.onsuccess = function () {
+        var db = rq.result;
+        if (!db.objectStoreNames.contains(FBST)) { db.close(); return res(null); }
+        res(db);
+      };
+      rq.onerror = function () { res(null); };
+      rq.onblocked = function () { res(null); };
+    });
+  }
+  function fbAll() {
+    return fbOpen().then(function (db) {
+      if (!db) return [];
+      return new Promise(function (res) {
+        try {
+          var out = [], cur = db.transaction(FBST, 'readonly').objectStore(FBST).openCursor();
+          cur.onsuccess = function () { var c = cur.result; if (c) { out.push(c.value); c.continue(); } else { db.close(); res(out); } };
+          cur.onerror = function () { db.close(); res([]); };
+        } catch (e) { db.close(); res([]); }
+      });
+    });
+  }
+  function fbPut(list) {
+    return fbOpen().then(function (db) {
+      if (!db) return;
+      return new Promise(function (res) {
+        try {
+          var tx = db.transaction(FBST, 'readwrite'), st = tx.objectStore(FBST);
+          list.forEach(function (e) { st.put(e); });
+          tx.oncomplete = function () { db.close(); res(); };
+          tx.onerror = tx.onabort = function () { db.close(); res(); };
+        } catch (e) { db.close(); res(); }
+      });
+    });
+  }
+  function uidOf(v) { try { var o = typeof v === 'string' ? JSON.parse(v) : v; return o && o.uid; } catch (e) { return null; } }
+  // 이 브라우저 Firebase 계정 → localStorage 복사 (계정(uid)이 바뀌었을 때만)
+  function fbMirror() {
+    return fbAll().then(function (list) {
+      list.forEach(function (e) {
+        if (!e || typeof e.fbase_key !== 'string' || e.fbase_key.indexOf('firebase:authUser:') !== 0) return;
+        var k = FBP + e.fbase_key, u = uidOf(e.value);
+        if (u && u !== uidOf(g(k)) && !blocked) LS.setItem(k, JSON.stringify(e.value));
+      });
+    }).catch(function () {});
+  }
+  // 클라우드에서 온 Firebase 계정을 이 브라우저에 넣기. 계정이 실제로 바뀌면 true
+  function fbApply(items) {
+    if (!items.length) return Promise.resolve(false);
+    return fbAll().then(function (list) {
+      var now = {}, put = [];
+      list.forEach(function (e) { if (e && e.fbase_key) now[e.fbase_key] = uidOf(e.value); });
+      items.forEach(function (it) {
+        var fk = it.k.slice(FBP.length), v;
+        try { v = JSON.parse(it.v); } catch (e) { return; }
+        if (v && v.uid && now[fk] !== v.uid) put.push({ fbase_key: fk, value: v });
+      });
+      if (!put.length) return false;
+      blocked = true;
+      return fbPut(put).then(function () { return true; });
+    });
+  }
+
   var configured = API.indexOf('REPLACE_ME') < 0;
   var blocked = false, timer = null, pushing = false, again = false, lastPush = 0;
   var fresh = false;          // 이번 페이지에서 클라우드 최신 상태를 확인했는지
@@ -111,19 +182,25 @@
   function pull(since) {
     if (since == null) since = +(g(P + 'since') || 0);
     return api('pull', { since: since }).then(function (res) {
-      var changed = false;
+      var changed = false, fbq = [];
       (res.items || []).forEach(function (it) {
         if (it.k.indexOf(P) === 0) return;
         if (it.ts <= (meta[it.k] || 0)) return;     // 이미 맞춘 버전
         meta[it.k] = it.ts; delete dirty[it.k];      // 다른 기기에서 바뀜 → 이 기기 옛날 값 버림
         var cur = g(it.k);
+        if (it.k.indexOf(FBP) === 0) {              // Firebase 계정은 IndexedDB에도 넣기
+          if (!it.del) { s(it.k, it.v); fbq.push(it); }
+          return;
+        }
         if (it.del) { if (cur !== null) { blocked = true; r(it.k); changed = true; } }
         else if (cur !== it.v) { blocked = true; s(it.k, it.v); changed = true; }
       });
       saveMeta(); saveDirty();
       s(P + 'since', String(res.max || since));
-      fresh = true; lastErr = ''; lastOk = Date.now();
-      return changed;
+      return fbApply(fbq).then(function (fc) {
+        fresh = true; lastErr = ''; lastOk = Date.now();
+        return changed || fc;
+      });
     });
   }
 
@@ -138,7 +215,7 @@
     if (!on()) return Promise.resolve();
     if (syncing) return syncing;
     fresh = false; setStat('busy');
-    syncing = pull().then(function (changed) {
+    syncing = fbMirror().then(function () { return pull(); }).then(function (changed) {
       if (changed) { reload(); return; }
       return push();
     }).then(function () { if (!blocked) setStat(lastErr ? 'err' : 'ok'); }).catch(function (e) {
@@ -173,7 +250,7 @@
     if (!id || !pw) return Promise.reject(new Error('아이디랑 비밀번호 써줘'));
     if (pw.length < 4) return Promise.reject(new Error('비밀번호는 4자 이상'));
     var auth;
-    return sha(id + '|' + pw + '|spys-cloud').then(function (h) {
+    return fbMirror().then(function () { return sha(id + '|' + pw + '|spys-cloud'); }).then(function (h) {
       auth = h;
       return api('login', { id: id, auth: auth });
     }).then(function (res) {
@@ -345,6 +422,7 @@
     });
     addEventListener('pagehide', function () { if (on() && !blocked) push(true); });
     setInterval(function () { if (on() && !blocked && document.visibilityState === 'visible') syncNow(); }, 60000);
+    [3000, 8000, 15000, 30000].forEach(function (ms) { setTimeout(function () { if (!blocked) fbMirror(); }, ms); });
   }
   if (document.readyState === 'complete') start();
   else addEventListener('load', start);
