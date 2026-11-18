@@ -3,7 +3,7 @@
   'use strict';
   if (window.__CS) return;
   // ▼▼ Cloudflare Worker 주소 (만든 뒤 여기만 바꾸면 됨) ▼▼
-  var API = 'https://REPLACE_ME.workers.dev';
+  var API = 'https://spys-save.spys7777.workers.dev';
   // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
   var P = '__cs_';
   var LS;
